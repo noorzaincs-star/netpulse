@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+.coverage.*
+*.egg-info/
+.venv/
+venv/
+
+# Frontend
+node_modules/
+dist/
+coverage/
+
+# Local configuration and runtime data
+.env
+*.sqlite
+*.sqlite3
+*.db
+
+# Editor / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+Thumbs.db
+.DS_Store
