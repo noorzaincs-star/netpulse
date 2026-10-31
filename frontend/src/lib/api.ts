@@ -8,10 +8,13 @@ import type {
   TopologyNode,
 } from "../types";
 
-const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000/api").replace(
-  /\/$/,
+const API_ORIGIN = (import.meta.env.VITE_API_URL || "http://127.0.0.1:8000").replace(
+  /\/+$/,
   "",
 );
+const API_BASE = `${API_ORIGIN}/api`;
+
+export const apiDocsUrl = `${API_ORIGIN}/docs`;
 
 export class ApiError extends Error {
   constructor(
@@ -105,7 +108,7 @@ export const api = {
 };
 
 export function socketUrl(): string {
-  const url = new URL(API_BASE);
+  const url = new URL(`${API_BASE}/ws`);
   url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
-  return `${url.origin}${url.pathname.replace(/\/api$/, "")}/api/ws`;
+  return url.toString();
 }

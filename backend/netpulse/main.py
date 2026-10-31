@@ -78,13 +78,13 @@ def create_app(
     @app.middleware("http")
     async def localhost_host_guard(request: Request, call_next):
         hostname = request.url.hostname
-        if hostname not in {"localhost", "127.0.0.1", "::1"}:
+        if hostname not in config.allowed_hosts:
             return JSONResponse(
                 status_code=403,
                 content={
                     "error": {
-                        "code": "local_only",
-                        "message": "NetPulse accepts requests only through localhost.",
+                        "code": "host_not_allowed",
+                        "message": "The request host is not configured for NetPulse.",
                     }
                 },
             )

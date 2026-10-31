@@ -1,6 +1,6 @@
 # NetPulse architecture
 
-NetPulse is planned as a localhost-only web client backed by a lifecycle-managed Python service. Network observations originate only from configured checks; the browser renders persisted results and marks unavailable or stale values explicitly.
+NetPulse is a local-first web client backed by a lifecycle-managed Python service. It defaults to localhost for local use; deployments configure frontend CORS origins and allowed API hostnames. Network observations originate only from configured checks; the browser renders persisted results and marks unavailable or stale values explicitly.
 
 ```mermaid
 flowchart LR
@@ -37,3 +37,4 @@ flowchart LR
 - Interface counters describe the local host's network interfaces, not per-device bandwidth.
 - Topology edges are manually configured. Ping and TCP outcomes do not discover physical network links.
 - Staleness, unavailable measurements, and check errors remain distinct from live successful results.
+- CORS and host allowlists are not authentication. A public deployment must add access control before exposing monitored targets or state-changing API operations.

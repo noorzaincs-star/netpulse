@@ -51,6 +51,29 @@ Keep both windows open. Open `http://127.0.0.1:5173` for the dashboard or `http:
 
 Optionally, copy `.env.example` to `.env` in the project root to configure local limits.
 
+## Deploy on Render and Vercel
+
+The API and frontend are deployed separately. Set the API origin (without `/api`) as the Vite build-time variable `VITE_API_URL`; the frontend derives its REST, WebSocket, and API-docs URLs from it.
+
+### Render — backend
+
+- **Root Directory:** `backend`
+- **Build Command:** `python -m pip install -r requirements-lock.txt && python -m pip install --no-deps -e .`
+- **Start Command:** `uvicorn netpulse.main:app --host 0.0.0.0 --port $PORT`
+- **Environment:** set `CORS_ORIGINS` to the exact frontend origin, for example `https://netpulse.vercel.app`. Add comma-separated origins only for frontend deployments that should be allowed. Render's `RENDER_EXTERNAL_HOSTNAME` is accepted for the API host; set `NETPULSE_ALLOWED_HOSTS` to comma-separated hostnames if using a custom API domain.
+
+### Vercel — frontend
+
+- **Root Directory:** `frontend`
+- **Install Command:** `npm ci`
+- **Build Command:** `npm run build`
+- **Output Directory:** `dist`
+- **Environment Variable:** `VITE_API_URL=https://<your-render-service>.onrender.com`
+
+Vercel builds the static site; it does not need a separate start command. Set `VITE_API_URL` in the Vercel project settings and redeploy after changing it. The URL must be the API origin, with no trailing slash or `/api`. Set `CORS_ORIGINS` on Render to the corresponding Vercel origin.
+
+**Deployment limitations:** The API currently has no authentication. CORS and allowed-host checks are not authentication and do not prevent non-browser clients from calling the API. Do not expose real monitoring targets to a public API until authentication or equivalent access controls are in place. SQLite storage on a typical Render filesystem is ephemeral; use a persistent disk and a `NETPULSE_DATABASE_URL` on that disk if data must survive redeploys/restarts.
+
 ## Test and build
 
 ```powershell
@@ -65,7 +88,7 @@ npm audit
 
 ## Configuration and safety
 
-See [.env.example](.env.example) for database, concurrency, incident thresholds, stale-data, retention, and CORS settings. The service binds to loopback by default and rejects non-local HTTP hosts and untrusted WebSocket origins. Do not expose it on a LAN or public interface without adding authentication and a deliberate security review.
+See [.env.example](.env.example) for local defaults and deployment variables, including CORS origins. The service binds to loopback by default; only the configured Render host is accepted when deployed, and remote WebSocket clients must send an explicitly allowed origin. Do not expose it without authentication and a deliberate security review.
 
 Add only devices and TCP ports you own or are authorized to monitor. NetPulse does not discover devices, scan address ranges, or execute arbitrary commands. Ping uses argument-list subprocess calls without a shell. Windows Firewall, endpoint policy, DNS configuration, and target-side filtering can block checks; a failed check is evidence of a failed probe, not proof that a device is offline or a root cause.
 

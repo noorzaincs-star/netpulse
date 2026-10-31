@@ -18,13 +18,12 @@ async def live_updates(websocket: WebSocket) -> None:
 
     client = websocket.client.host if websocket.client else ""
     try:
-        if not ipaddress.ip_address(client).is_loopback:
-            await websocket.close(code=1008, reason="NetPulse live updates are local-only.")
-            return
+        is_loopback = ipaddress.ip_address(client).is_loopback
     except ValueError:
-        if client not in {"testclient", "localhost"}:
-            await websocket.close(code=1008, reason="NetPulse live updates are local-only.")
-            return
+        is_loopback = client in {"testclient", "localhost"}
+    if not is_loopback and (origin is None or origin not in allowed_origins):
+        await websocket.close(code=1008, reason="Origin is required for remote live updates.")
+        return
 
     broker = websocket.app.state.broker
     queue = await broker.connect(websocket)

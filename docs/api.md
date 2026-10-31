@@ -97,4 +97,4 @@ Supports `device_id`, `severity` (`info`, `warning`, `critical`), `status` (`act
 
 ### `WS /api/ws`
 
-Streams committed `device.updated`, `device.deleted`, `measurement.created`, `incident.created`, `incident.recovered`, and topology updates. A keepalive is sent during idle periods. Connections are loopback-only; browser `Origin` must match configured CORS origins. The frontend reconnects with backoff and continues REST polling while disconnected.
+Streams committed `device.updated`, `device.deleted`, `measurement.created`, `incident.created`, `incident.recovered`, and topology updates. A keepalive is sent during idle periods. Local clients are supported by default; remote clients must send a browser `Origin` matching `CORS_ORIGINS`. The frontend reconnects with backoff and continues REST polling while disconnected. CORS is not authentication.

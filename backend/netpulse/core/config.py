@@ -20,6 +20,11 @@ class Settings:
     packet_loss_threshold_percent: float = 20.0
     measurement_retention_days: int = 30
     cors_origins: tuple[str, ...] = ("http://127.0.0.1:5173", "http://localhost:5173")
+    allowed_hosts: tuple[str, ...] = (
+        "localhost",
+        "127.0.0.1",
+        "::1",
+    )
 
     def __post_init__(self) -> None:
         if not 1 <= self.max_devices <= 10_000:
@@ -45,21 +50,34 @@ class Settings:
             parsed = urlsplit(origin)
             if (
                 parsed.scheme not in {"http", "https"}
-                or parsed.hostname not in {"localhost", "127.0.0.1", "::1"}
+                or parsed.hostname is None
                 or parsed.path not in {"", "/"}
                 or parsed.query
                 or parsed.fragment
                 or parsed.username
                 or parsed.password
             ):
-                raise ValueError("CORS origins must be HTTP(S) localhost origins.")
+                raise ValueError("CORS origins must be HTTP(S) origins without paths or credentials.")
+        if any(not host or host != host.strip() for host in self.allowed_hosts):
+            raise ValueError("allowed_hosts must contain non-empty hostnames.")
 
     @classmethod
     def from_environment(cls) -> "Settings":
         load_dotenv()
         origins = os.environ.get(
-            "NETPULSE_CORS_ORIGINS",
-            "http://127.0.0.1:5173,http://localhost:5173",
+            "CORS_ORIGINS",
+            os.environ.get(
+                "NETPULSE_CORS_ORIGINS",
+                "http://127.0.0.1:5173,http://localhost:5173",
+            ),
+        )
+        render_hostname = os.environ.get("RENDER_EXTERNAL_HOSTNAME", "").strip()
+        configured_hosts = os.environ.get("NETPULSE_ALLOWED_HOSTS", "")
+        allowed_hosts = ("localhost", "127.0.0.1", "::1")
+        allowed_hosts += tuple(
+            host.strip().lower()
+            for host in (render_hostname, *configured_hosts.split(","))
+            if host.strip()
         )
         return cls(
             database_url=os.environ.get(
@@ -77,4 +95,5 @@ class Settings:
             ),
             measurement_retention_days=int(os.environ.get("NETPULSE_RETENTION_DAYS", "30")),
             cors_origins=tuple(origin.strip() for origin in origins.split(",") if origin.strip()),
+            allowed_hosts=tuple(dict.fromkeys(allowed_hosts)),
         )

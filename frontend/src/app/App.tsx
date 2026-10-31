@@ -44,7 +44,7 @@ import {
 } from "recharts";
 import DeviceDialog from "../components/DeviceDialog";
 import TopologyView from "../components/TopologyView";
-import { api } from "../lib/api";
+import { api, apiDocsUrl } from "../lib/api";
 import { useNetPulse } from "../hooks/useNetPulse";
 import type { Device, DeviceState, Incident, Measurement } from "../types";
 
@@ -335,7 +335,7 @@ export default function App() {
         </nav>
         <div className="sidebar-bottom">
           <div className="scope-card"><ShieldCheck size={17} /><div><strong>Local &amp; private</strong><span>Only configured targets<br />are monitored.</span></div></div>
-          <button className="nav-item support-item" onClick={() => window.open("http://127.0.0.1:8000/docs", "_blank", "noopener,noreferrer")}><LifeBuoy size={17} /><span>API documentation</span><ChevronRight size={14} /></button>
+          <button className="nav-item support-item" onClick={() => window.open(apiDocsUrl, "_blank", "noopener,noreferrer")}><LifeBuoy size={17} /><span>API documentation</span><ChevronRight size={14} /></button>
           <div className="profile-row"><div className="avatar">NP</div><div><strong>NetPulse</strong><small>Local instance</small></div><Settings2 size={16} className="muted" /></div>
         </div>
       </aside>
@@ -479,7 +479,7 @@ export default function App() {
             />
           )}
 
-          <footer className="page-footer"><span><ShieldCheck size={14} /> Local-first monitoring · No cloud telemetry</span><span>{data.interfaces?.interfaces.length ?? 0} host interfaces detected <span className="footer-divider">·</span> <a href="http://127.0.0.1:8000/docs" target="_blank" rel="noreferrer">API docs <ArrowUpRight size={12} /></a></span></footer>
+          <footer className="page-footer"><span><ShieldCheck size={14} /> Local-first monitoring · No cloud telemetry</span><span>{data.interfaces?.interfaces.length ?? 0} host interfaces detected <span className="footer-divider">·</span> <a href={apiDocsUrl} target="_blank" rel="noreferrer">API docs <ArrowUpRight size={12} /></a></span></footer>
         </div>
       </main>
       {dialog && (

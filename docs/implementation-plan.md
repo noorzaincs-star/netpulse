@@ -5,7 +5,7 @@
 NetPulse will be a local-first, single-user application with two processes:
 
 - A FastAPI service owns configuration, SQLite persistence, monitoring lifecycle, and network operations.
-- A React/Vite client reads the service over localhost HTTP and WebSocket. REST polling remains available if a WebSocket disconnects.
+- A React/Vite client reads the service over localhost HTTP and WebSocket by default. `VITE_API_URL` configures the deployed API origin; REST polling remains available if a WebSocket disconnects.
 
 The service separates transport/API concerns, validation and domain logic, network adapters, persistence, and scheduled work. Async SQLAlchemy sessions handle SQLite work outside network operations; the lifecycle-managed worker bounds network concurrency and batches retention deletes.
 

@@ -45,3 +45,16 @@ def test_websocket_rejects_an_untrusted_origin(tmp_path: Path) -> None:
             ):
                 pass
         assert error.value.code == 1008
+
+
+def test_http_accepts_configured_render_hostname(tmp_path: Path) -> None:
+    settings = Settings(
+        database_url=f"sqlite+aiosqlite:///{tmp_path / 'render.sqlite3'}",
+        allowed_hosts=("localhost", "127.0.0.1", "::1", "netpulse-api.onrender.com"),
+    )
+    app = create_app(settings, start_worker=False)
+
+    with TestClient(app, base_url="https://netpulse-api.onrender.com") as client:
+        response = client.get("/api/health")
+
+    assert response.status_code == 200
