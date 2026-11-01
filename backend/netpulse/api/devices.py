@@ -16,6 +16,7 @@ from netpulse.schemas.devices import (
     DeviceState,
 )
 from netpulse.schemas.monitoring import CheckRequest
+from netpulse.api.security import AdminRequired, visible_demo_hosts
 from netpulse.services.monitoring import MonitoringService
 
 router = APIRouter(prefix="/devices", tags=["devices"])
@@ -76,9 +77,16 @@ async def serialize_device(
     )
 
 
-async def get_device_or_404(session: AsyncSession, device_id: str) -> Device:
+async def get_device_or_404(
+    session: AsyncSession,
+    device_id: str,
+    *,
+    allowed_hosts: frozenset[str] | None = None,
+) -> Device:
     device = await session.get(Device, device_id)
-    if device is None:
+    if device is None or (
+        allowed_hosts is not None and device.hostname not in allowed_hosts
+    ):
         raise HTTPException(
             status_code=404,
             detail={"code": "device_not_found", "message": "Device was not found."},
@@ -100,6 +108,9 @@ async def list_devices(
     async with request.app.state.sessions() as session:
         query = select(Device)
         filters = []
+        allowed_hosts = visible_demo_hosts(request)
+        if allowed_hosts is not None:
+            filters.append(Device.hostname.in_(allowed_hosts))
         if search:
             term = f"%{search.strip()}%"
             filters.append(or_(Device.name.ilike(term), Device.hostname.ilike(term)))
@@ -134,9 +145,35 @@ async def list_devices(
     return DeviceListResponse(items=items, total=total, page=page, page_size=page_size)
 
 
-@router.post("", response_model=DeviceDetailResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=DeviceDetailResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[AdminRequired],
+)
 async def create_device(payload: DeviceCreate, request: Request) -> DeviceDetailResponse:
     async with request.app.state.sessions() as session:
+        allowed_hosts = visible_demo_hosts(request)
+        if allowed_hosts is not None:
+            if payload.hostname not in allowed_hosts:
+                raise HTTPException(
+                    status_code=422,
+                    detail={
+                        "code": "demo_target_not_allowed",
+                        "message": "Public demo devices may only target google.com or 8.8.8.8.",
+                    },
+                )
+            duplicate = await session.scalar(
+                select(Device.id).where(Device.hostname == payload.hostname).limit(1)
+            )
+            if duplicate is not None:
+                raise HTTPException(
+                    status_code=409,
+                    detail={
+                        "code": "demo_target_exists",
+                        "message": "The public demo target is already configured.",
+                    },
+                )
         current_count = await session.scalar(select(func.count()).select_from(Device)) or 0
         if current_count >= request.app.state.settings.max_devices:
             raise HTTPException(
@@ -173,13 +210,21 @@ async def create_device(payload: DeviceCreate, request: Request) -> DeviceDetail
 @router.get("/{device_id}", response_model=DeviceDetailResponse)
 async def get_device(device_id: str, request: Request) -> DeviceDetailResponse:
     async with request.app.state.sessions() as session:
-        device = await get_device_or_404(session, device_id)
+        device = await get_device_or_404(
+            session,
+            device_id,
+            allowed_hosts=visible_demo_hosts(request),
+        )
         return await serialize_device(
             session, device, request.app.state.settings.stale_after_seconds
         )
 
 
-@router.patch("/{device_id}", response_model=DeviceDetailResponse)
+@router.patch(
+    "/{device_id}",
+    response_model=DeviceDetailResponse,
+    dependencies=[AdminRequired],
+)
 async def update_device(
     device_id: str,
     payload: DevicePatch,
@@ -192,7 +237,23 @@ async def update_device(
             detail={"code": "empty_patch", "message": "At least one field must be provided."},
         )
     async with request.app.state.sessions() as session:
-        device = await get_device_or_404(session, device_id)
+        device = await get_device_or_404(
+            session,
+            device_id,
+            allowed_hosts=visible_demo_hosts(request),
+        )
+        allowed_hosts = visible_demo_hosts(request)
+        if (
+            allowed_hosts is not None
+            and changes.get("hostname", device.hostname) not in allowed_hosts
+        ):
+            raise HTTPException(
+                status_code=422,
+                detail={
+                    "code": "demo_target_not_allowed",
+                    "message": "Public demo devices may only target google.com or 8.8.8.8.",
+                },
+            )
         proposed_checks = [
             item.value if isinstance(item, CheckType) else item
             for item in changes.get("check_types", device.check_types)
@@ -229,10 +290,18 @@ async def update_device(
     return response
 
 
-@router.delete("/{device_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{device_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[AdminRequired],
+)
 async def delete_device(device_id: str, request: Request) -> None:
     async with request.app.state.sessions() as session:
-        device = await get_device_or_404(session, device_id)
+        device = await get_device_or_404(
+            session,
+            device_id,
+            allowed_hosts=visible_demo_hosts(request),
+        )
         await session.delete(device)
         await session.commit()
     await request.app.state.broker.publish(
@@ -240,7 +309,7 @@ async def delete_device(device_id: str, request: Request) -> None:
     )
 
 
-@router.post("/{device_id}/check")
+@router.post("/{device_id}/check", dependencies=[AdminRequired])
 async def manual_check(
     device_id: str,
     request: Request,
@@ -275,7 +344,11 @@ async def manual_check(
     }
 
 
-@router.post("/{device_id}/pause", response_model=DeviceDetailResponse)
+@router.post(
+    "/{device_id}/pause",
+    response_model=DeviceDetailResponse,
+    dependencies=[AdminRequired],
+)
 async def pause_device(device_id: str, request: Request) -> DeviceDetailResponse:
     return await update_device(
         device_id,
@@ -284,7 +357,11 @@ async def pause_device(device_id: str, request: Request) -> DeviceDetailResponse
     )
 
 
-@router.post("/{device_id}/resume", response_model=DeviceDetailResponse)
+@router.post(
+    "/{device_id}/resume",
+    response_model=DeviceDetailResponse,
+    dependencies=[AdminRequired],
+)
 async def resume_device(device_id: str, request: Request) -> DeviceDetailResponse:
     return await update_device(
         device_id,

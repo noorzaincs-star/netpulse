@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from netpulse.core.config import Settings
+from netpulse.core.config import PUBLIC_DEMO_TARGETS, Settings
 from netpulse.models import Device, Measurement
 from netpulse.services.monitoring import MonitoringService
 
@@ -50,11 +50,10 @@ class MonitoringWorker:
         while True:
             try:
                 async with self.sessions() as session:
-                    devices = (
-                        await session.scalars(
-                            select(Device).where(Device.enabled.is_(True))
-                        )
-                    ).all()
+                    query = select(Device).where(Device.enabled.is_(True))
+                    if self.settings.public_demo_mode:
+                        query = query.where(Device.hostname.in_(PUBLIC_DEMO_TARGETS))
+                    devices = (await session.scalars(query)).all()
                 enabled_ids = {device.id for device in devices}
                 self._next_due = {
                     device_id: due

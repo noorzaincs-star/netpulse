@@ -20,6 +20,7 @@ interface NetPulseState {
   nodes: TopologyNode[];
   links: TopologyLink[];
   connection: ConnectionState;
+  publicDemoMode: boolean | null;
   loading: boolean;
   error: string | null;
   lastUpdated: Date | null;
@@ -37,6 +38,7 @@ export function useNetPulse(): NetPulseState {
   const [nodes, setNodes] = useState<TopologyNode[]>([]);
   const [links, setLinks] = useState<TopologyLink[]>([]);
   const [connection, setConnection] = useState<ConnectionState>("connecting");
+  const [publicDemoMode, setPublicDemoMode] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -69,6 +71,7 @@ export function useNetPulse(): NetPulseState {
       const measurementPage = values[2] as Awaited<ReturnType<typeof api.measurements>>;
       const interfaceData = values[3] as InterfaceSnapshot;
       const topologyData = values[4] as Awaited<ReturnType<typeof api.topology>>;
+      const runtimeSettings = values[5] as { demo_mode?: boolean };
       setDevices(devicePage.items);
       setTotalDevices(devicePage.total);
       setIncidents(incidentPage.items);
@@ -76,6 +79,11 @@ export function useNetPulse(): NetPulseState {
       setInterfaces(interfaceData);
       setNodes(topologyData.nodes);
       setLinks(topologyData.links);
+      setPublicDemoMode(
+        typeof runtimeSettings.demo_mode === "boolean"
+          ? runtimeSettings.demo_mode
+          : null,
+      );
       setLastUpdated(new Date());
       setError(null);
       setLoading(false);
@@ -140,6 +148,7 @@ export function useNetPulse(): NetPulseState {
     nodes,
     links,
     connection,
+    publicDemoMode,
     loading,
     error,
     lastUpdated,

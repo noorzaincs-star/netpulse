@@ -177,6 +177,7 @@ function DeviceDetails({
 
 export default function App() {
   const data = useNetPulse();
+  const readOnly = data.publicDemoMode !== false;
   const [view, setView] = useState<View>("overview");
   const [dialog, setDialog] = useState<"create" | "edit" | null>(null);
   const [editingDevice, setEditingDevice] = useState<Device | undefined>();
@@ -325,7 +326,7 @@ export default function App() {
           <div><strong>netpulse</strong><span>NETWORK OPERATIONS</span></div>
           <button className="mobile-close icon-button" aria-label="Close navigation" onClick={() => setMobileNav(false)}><X size={18} /></button>
         </div>
-        <div className="workspace-switch"><span className="workspace-icon"><Network size={16} /></span><span><strong>Local workspace</strong><small>Private monitoring</small></span><ChevronDown size={15} /></div>
+        <div className="workspace-switch"><span className="workspace-icon"><Network size={16} /></span><span><strong>{data.publicDemoMode === null ? "Connecting" : data.publicDemoMode ? "Public demo" : "Local workspace"}</strong><small>{data.publicDemoMode === null ? "Checking runtime mode" : data.publicDemoMode ? "Read-only · real checks" : "Private monitoring"}</small></span><ChevronDown size={15} /></div>
         <span className="nav-label">WORKSPACE</span>
         <nav className="main-nav" aria-label="Main navigation">
           <NavButton active={view === "overview"} icon={<LayoutDashboard size={17} />} label="Overview" onClick={() => { setView("overview"); setMobileNav(false); }} />
@@ -334,7 +335,7 @@ export default function App() {
           <NavButton active={view === "topology"} icon={<Network size={17} />} label="Topology" onClick={() => { setView("topology"); setMobileNav(false); }} />
         </nav>
         <div className="sidebar-bottom">
-          <div className="scope-card"><ShieldCheck size={17} /><div><strong>Local &amp; private</strong><span>Only configured targets<br />are monitored.</span></div></div>
+          <div className="scope-card"><ShieldCheck size={17} /><div><strong>{readOnly ? "Read-only access" : "Local &amp; private"}</strong><span>Only configured targets<br />are monitored.</span></div></div>
           <button className="nav-item support-item" onClick={() => window.open(apiDocsUrl, "_blank", "noopener,noreferrer")}><LifeBuoy size={17} /><span>API documentation</span><ChevronRight size={14} /></button>
           <div className="profile-row"><div className="avatar">NP</div><div><strong>NetPulse</strong><small>Local instance</small></div><Settings2 size={16} className="muted" /></div>
         </div>
@@ -357,9 +358,10 @@ export default function App() {
         <div className="page-content">
           {data.error && <div className="error-banner" role="alert"><AlertTriangle size={17} /><span>{data.error} <small>Showing the last successful data, if available.</small></span><button className="icon-button" onClick={() => void data.refresh()} aria-label="Retry"><RefreshCw size={15} /></button></div>}
           <div className="page-title-row">
-            <div><div className="eyebrow page-eyebrow"><span className="pulse-dot" /> LOCAL MONITORING</div><h1>{activeViewTitle[view]}</h1><p className="page-subtitle">A clear view of your configured network checks and device health.</p></div>
-            <div className="page-title-actions"><div className="last-updated"><Clock3 size={14} /><span>Updated {data.lastUpdated ? formatTime(data.lastUpdated.toISOString()) : "—"}</span></div><button className="button primary" onClick={() => { setEditingDevice(undefined); setDialog("create"); }}><Plus size={16} /> Add device</button></div>
+            <div><div className="eyebrow page-eyebrow"><span className="pulse-dot" /> {data.publicDemoMode === null ? "READ-ONLY UNTIL CONNECTED" : data.publicDemoMode ? "PUBLIC LIVE DEMO" : "LOCAL MONITORING"}</div><h1>{activeViewTitle[view]}</h1><p className="page-subtitle">A clear view of your configured network checks and device health.</p></div>
+            <div className="page-title-actions"><div className="last-updated"><Clock3 size={14} /><span>Updated {data.lastUpdated ? formatTime(data.lastUpdated.toISOString()) : "—"}</span></div>{!readOnly && <button className="button primary" onClick={() => { setEditingDevice(undefined); setDialog("create"); }}><Plus size={16} /> Add device</button>}</div>
           </div>
+          {data.publicDemoMode && <div className="loading-banner" role="status">Read-only public demo. Scheduled checks use real measurements and are restricted to google.com and 8.8.8.8.</div>}
           {data.loading && !data.lastUpdated && <div className="loading-banner" role="status"><RefreshCw size={15} className="spin" /> Connecting to the local API and loading persisted measurements…</div>}
 
           {view === "overview" && (
@@ -418,13 +420,16 @@ export default function App() {
                     onDelete={removeDevice}
                     busyId={busyId}
                     compact
+                    readOnly={readOnly}
                   />
                 </section>
                 <div className="side-stack">
                   <section className="panel traffic-panel">
                     <div className="panel-heading"><div><span className="eyebrow">LOCAL HOST</span><h2>Interface throughput</h2></div><Wifi size={16} className="muted" /></div>
                     <p className="muted small">Host interface counters · not per-device bandwidth</p>
-                    {interfaceHistory.length ? (
+                    {readOnly ? (
+                      <div className="traffic-empty"><Gauge size={18} /><span>Local host interface statistics are not exposed in the public demo.</span></div>
+                    ) : interfaceHistory.length ? (
                       <ResponsiveContainer width="100%" height={115}>
                         <AreaChart data={interfaceHistory}>
                           <defs><linearGradient id="trafficSent" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#74a7ff" stopOpacity=".2" /><stop offset="100%" stopColor="#74a7ff" stopOpacity="0" /></linearGradient><linearGradient id="trafficReceived" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#48d6b5" stopOpacity=".2" /><stop offset="100%" stopColor="#48d6b5" stopOpacity="0" /></linearGradient></defs>
@@ -434,7 +439,7 @@ export default function App() {
                         </AreaChart>
                       </ResponsiveContainer>
                     ) : <div className="traffic-empty"><Gauge size={18} /><span>Rates become available after two interface samples.</span></div>}
-                    <div className="traffic-legend"><span><i className="legend-dot mint" />Received</span><strong>{formatBytes(interfaceHistory.at(-1)?.received)}</strong><span><i className="legend-dot blue" />Sent</span><strong>{formatBytes(interfaceHistory.at(-1)?.sent)}</strong></div>
+                    {!readOnly && <div className="traffic-legend"><span><i className="legend-dot mint" />Received</span><strong>{formatBytes(interfaceHistory.at(-1)?.received)}</strong><span><i className="legend-dot blue" />Sent</span><strong>{formatBytes(interfaceHistory.at(-1)?.sent)}</strong></div>}
                   </section>
                   <section className="panel activity-panel">
                     <div className="panel-heading"><div><span className="eyebrow">RECENT EVENTS</span><h2>Activity</h2></div><Activity size={16} className="muted" /></div>
@@ -462,6 +467,7 @@ export default function App() {
                 sortKey={sortKey}
                 sortDirection={sortDirection}
                 onSort={changeSort}
+                readOnly={readOnly}
               />
               <div className="pagination"><span>Showing {filteredDevices.length ? (page - 1) * pageSize + 1 : 0}–{Math.min(page * pageSize, filteredDevices.length)} of {filteredDevices.length}</span><div><button className="icon-button" aria-label="Previous page" disabled={page <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))}><ChevronLeft size={17} /></button><span>Page {page} of {totalPages}</span><button className="icon-button" aria-label="Next page" disabled={page >= totalPages} onClick={() => setPage((value) => Math.min(totalPages, value + 1))}><ChevronRight size={17} /></button></div></div>
             </section>
@@ -476,10 +482,11 @@ export default function App() {
               note="Relationships are configured manually."
               onCreateLink={createLink}
               onDeleteLink={deleteLink}
+              readOnly={readOnly}
             />
           )}
 
-          <footer className="page-footer"><span><ShieldCheck size={14} /> Local-first monitoring · No cloud telemetry</span><span>{data.interfaces?.interfaces.length ?? 0} host interfaces detected <span className="footer-divider">·</span> <a href={apiDocsUrl} target="_blank" rel="noreferrer">API docs <ArrowUpRight size={12} /></a></span></footer>
+          <footer className="page-footer"><span><ShieldCheck size={14} /> Local-first monitoring · No cloud telemetry</span><span>{readOnly ? "Host interface details hidden" : `${data.interfaces?.interfaces.length ?? 0} host interfaces detected`} <span className="footer-divider">·</span> <a href={apiDocsUrl} target="_blank" rel="noreferrer">API docs <ArrowUpRight size={12} /></a></span></footer>
         </div>
       </main>
       {dialog && (
@@ -536,6 +543,7 @@ function DeviceTable({
   onDelete,
   busyId,
   compact = false,
+  readOnly = false,
   sortKey,
   sortDirection,
   onSort,
@@ -548,6 +556,7 @@ function DeviceTable({
   onDelete: (device: Device) => void;
   busyId: string | null;
   compact?: boolean;
+  readOnly?: boolean;
   sortKey?: "name" | "state" | "last_checked_at";
   sortDirection?: "asc" | "desc";
   onSort?: (key: "name" | "state" | "last_checked_at") => void;
@@ -559,7 +568,7 @@ function DeviceTable({
   return (
     <div className={`table-wrap ${compact ? "compact-table" : ""}`}>
       <table className="device-table">
-        <thead><tr><th>DEVICE</th>{!compact && <th>TYPE</th>}<th>STATUS</th><th>LATENCY</th>{!compact && <th>LOSS</th>}<th>{sortButton("last_checked_at", "LAST CHECK")}</th><th aria-label="Actions" /></tr></thead>
+        <thead><tr><th>DEVICE</th>{!compact && <th>TYPE</th>}<th>STATUS</th><th>LATENCY</th>{!compact && <th>LOSS</th>}<th>{sortButton("last_checked_at", "LAST CHECK")}</th>{!readOnly && <th aria-label="Actions" />}</tr></thead>
         <tbody>
           {devices.map((device) => {
             const busy = busyId === device.id;
@@ -571,12 +580,12 @@ function DeviceTable({
                 <td><span className={device.latest_measurement?.latency_ms != null ? "metric-value" : "metric-empty"}>{formatLatency(device.latest_measurement?.latency_ms)}</span></td>
                 {!compact && <td><span className="metric-value">{device.latest_measurement?.packet_loss_percent == null ? "—" : `${device.latest_measurement.packet_loss_percent.toFixed(0)}%`}</span></td>}
                 <td><span className="last-check-cell"><strong>{formatAgo(device.last_checked_at)}</strong><small>{formatTime(device.last_checked_at)}</small></span></td>
-                <td><div className="row-actions">
+                {!readOnly && <td><div className="row-actions">
                   <button className="icon-button" aria-label={`Check ${device.name} now`} title="Check now" disabled={busy || !device.enabled} onClick={() => onCheck(device)}>{busy ? <RefreshCw size={15} className="spin" /> : <Zap size={15} />}</button>
                   <button className="icon-button" aria-label={`Edit ${device.name}`} title="Edit" onClick={() => onEdit(device)}><Settings2 size={15} /></button>
                   <button className="icon-button" aria-label={device.enabled ? `Pause ${device.name}` : `Resume ${device.name}`} title={device.enabled ? "Pause" : "Resume"} onClick={() => onToggle(device)}>{device.enabled ? <Signal size={15} /> : <SignalZero size={15} />}</button>
                   {!compact && <button className="icon-button danger" aria-label={`Delete ${device.name}`} title="Delete" onClick={() => onDelete(device)}><X size={15} /></button>}
-                </div></td>
+                </div></td>}
               </tr>
             );
           })}

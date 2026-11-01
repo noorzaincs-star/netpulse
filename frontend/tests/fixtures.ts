@@ -69,8 +69,15 @@ export function apiPayload(options: {
   incidents?: Incident[];
   measurements?: Measurement[];
   fail?: boolean;
+  publicDemoMode?: boolean;
 } = {}) {
-  const { devices = [], incidents = [], measurements = [], fail = false } = options;
+  const {
+    devices = [],
+    incidents = [],
+    measurements = [],
+    fail = false,
+    publicDemoMode = false,
+  } = options;
   const page = <T,>(items: T[]) => ({ items, total: items.length, page: 1, page_size: 100 });
   return vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
     const url = new URL(String(input));
@@ -80,7 +87,7 @@ export function apiPayload(options: {
     if (url.pathname.endsWith("/measurements")) return Response.json(page(measurements));
     if (url.pathname.endsWith("/interfaces")) return Response.json(interfaces);
     if (url.pathname.endsWith("/topology")) return Response.json({ nodes: [], links: [], relationships_note: "Manual only" });
-    if (url.pathname.endsWith("/settings")) return Response.json({});
+    if (url.pathname.endsWith("/settings")) return Response.json({ demo_mode: publicDemoMode });
     if (url.pathname.endsWith("/health")) return Response.json({ status: "ok", database: "ok" });
     return new Response(null, { status: 404 });
   });

@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
 
@@ -16,6 +17,7 @@ from netpulse.api.monitoring import router as monitoring_router
 from netpulse.core.config import Settings
 from netpulse.db.database import create_database_engine, initialize_database
 from netpulse.services.events import EventBroker
+from netpulse.services.demo import seed_public_demo_devices
 from netpulse.services.interfaces import InterfaceSampler
 from netpulse.services.monitoring import MonitoringService
 from netpulse.services.worker import MonitoringWorker
@@ -30,6 +32,7 @@ def create_app(
     settings: Settings | None = None,
     *,
     start_worker: bool = True,
+    static_dir: Path | None = None,
 ) -> FastAPI:
     config = settings or Settings.from_environment()
     engine = create_database_engine(config.database_url)
@@ -42,6 +45,8 @@ def create_app(
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         try:
             await initialize_database(engine)
+            if config.public_demo_mode:
+                await seed_public_demo_devices(sessions)
             if start_worker:
                 worker.start()
             yield
@@ -66,19 +71,31 @@ def create_app(
     app.include_router(devices_router, prefix="/api")
     app.include_router(monitoring_router, prefix="/api")
     app.include_router(live_router, prefix="/api")
+    frontend_dir = static_dir or Path(__file__).parent / "static"
+    if frontend_dir.is_dir():
+        from fastapi.staticfiles import StaticFiles
+
+        app.mount(
+            "/",
+            StaticFiles(directory=str(frontend_dir), html=True),
+            name="frontend",
+        )
 
     app.add_middleware(
         CORSMiddleware,
         allow_origins=list(config.cors_origins),
         allow_credentials=False,
         allow_methods=["GET", "POST", "PATCH", "DELETE"],
-        allow_headers=["Content-Type"],
+        allow_headers=["Content-Type", "Authorization"],
     )
 
     @app.middleware("http")
     async def localhost_host_guard(request: Request, call_next):
         hostname = request.url.hostname
-        if hostname not in config.allowed_hosts:
+        is_huggingface_host = (
+            config.public_demo_mode and hostname is not None and hostname.endswith(".hf.space")
+        )
+        if hostname not in config.allowed_hosts and not is_huggingface_host:
             return JSONResponse(
                 status_code=403,
                 content={

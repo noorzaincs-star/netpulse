@@ -42,6 +42,7 @@ flowchart LR
    - Start command: `uvicorn netpulse.main:app --host 0.0.0.0 --port $PORT`
    - Health check path: `/api/health`
    - Environment variables: `PYTHON_VERSION`, `CORS_ORIGINS`, `NETPULSE_DATABASE_URL`
+   - Public demo mode is enabled, with a generated `ADMIN_TOKEN`; probes are restricted to `google.com` and `8.8.8.8`.
 
 2. **`vercel.json` / `frontend/vercel.json`**:
    Vercel Single Page Application rewrite rules ensuring client-side routing and direct URLs resolve to `index.html`.
@@ -94,6 +95,10 @@ flowchart LR
 
 ---
 
+## Hugging Face Spaces — single Docker service
+
+For a single public URL, create a Docker Space using the repository root as the build context. The root Dockerfile builds the frontend and serves it with the API and WebSocket endpoint on port `7860`. In Space **Settings → Variables and secrets**, set `NETPULSE_DEMO=true` and set `ADMIN_TOKEN` as a secret containing at least 32 characters. The frontend uses same-origin REST and WebSocket URLs in production. Startup creates only the two allowlisted device configurations; measurements come from real checks, with no sample data.
+
 ## 4. Verification
 
 | Check | URL | Expected Result |
@@ -101,4 +106,3 @@ flowchart LR
 | **API Health** | `https://<render-backend>/api/health` | `{"status":"ok","database":"ok","version":"0.1.0"}` |
 | **OpenAPI Docs** | `https://<render-backend>/docs` | Swagger UI loaded |
 | **Dashboard** | `https://<vercel-frontend>` | NetPulse dashboard loaded with **LIVE** indicator |
-

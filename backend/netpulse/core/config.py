@@ -5,6 +5,8 @@ from urllib.parse import urlsplit
 
 from dotenv import load_dotenv
 
+PUBLIC_DEMO_TARGETS = frozenset({"google.com", "8.8.8.8"})
+
 
 @dataclass(frozen=True, slots=True)
 class Settings:
@@ -20,6 +22,8 @@ class Settings:
     packet_loss_threshold_percent: float = 20.0
     measurement_retention_days: int = 30
     cors_origins: tuple[str, ...] = ("http://127.0.0.1:5173", "http://localhost:5173")
+    public_demo_mode: bool = False
+    admin_token: str | None = None
     allowed_hosts: tuple[str, ...] = (
         "localhost",
         "127.0.0.1",
@@ -60,6 +64,14 @@ class Settings:
                 raise ValueError("CORS origins must be HTTP(S) origins without paths or credentials.")
         if any(not host or host != host.strip() for host in self.allowed_hosts):
             raise ValueError("allowed_hosts must contain non-empty hostnames.")
+        if self.public_demo_mode and (
+            self.admin_token is None
+            or len(self.admin_token) < 32
+            or not self.admin_token.strip()
+        ):
+            raise ValueError(
+                "ADMIN_TOKEN must contain at least 32 characters when NETPULSE_DEMO is enabled."
+            )
 
     @classmethod
     def from_environment(cls) -> "Settings":
@@ -73,6 +85,12 @@ class Settings:
         )
         render_hostname = os.environ.get("RENDER_EXTERNAL_HOSTNAME", "").strip()
         configured_hosts = os.environ.get("NETPULSE_ALLOWED_HOSTS", "")
+        public_demo_mode = os.environ.get("NETPULSE_DEMO", "").strip().lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
         allowed_hosts = ("localhost", "127.0.0.1", "::1")
         allowed_hosts += tuple(
             host.strip().lower()
@@ -96,4 +114,6 @@ class Settings:
             measurement_retention_days=int(os.environ.get("NETPULSE_RETENTION_DAYS", "30")),
             cors_origins=tuple(origin.strip().rstrip("/") for origin in origins.split(",") if origin.strip()),
             allowed_hosts=tuple(dict.fromkeys(allowed_hosts)),
+            public_demo_mode=public_demo_mode,
+            admin_token=os.environ.get("ADMIN_TOKEN") or None,
         )

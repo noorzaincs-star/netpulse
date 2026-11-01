@@ -12,5 +12,9 @@ services:
         value: 3.11.10
       - key: CORS_ORIGINS
         sync: false
+      - key: NETPULSE_DEMO
+        value: true
+      - key: ADMIN_TOKEN
+        generateValue: true
       - key: NETPULSE_DATABASE_URL
         value: sqlite+aiosqlite:///./netpulse.db

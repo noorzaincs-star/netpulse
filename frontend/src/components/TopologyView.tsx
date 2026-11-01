@@ -16,6 +16,7 @@ interface TopologyViewProps {
   note: string;
   onCreateLink: (source: string, target: string, label: string) => Promise<void>;
   onDeleteLink: (id: string) => Promise<void>;
+  readOnly?: boolean;
 }
 
 export default function TopologyView({
@@ -24,6 +25,7 @@ export default function TopologyView({
   note,
   onCreateLink,
   onDeleteLink,
+  readOnly = false,
 }: TopologyViewProps) {
   const [selected, setSelected] = useState<TopologyNode | null>(null);
   const [scale, setScale] = useState(1);
@@ -184,7 +186,9 @@ export default function TopologyView({
             <Link2 size={17} className="muted" />
           </div>
           <p className="muted small">Connections are only shown when you add them. Ping does not reveal physical topology.</p>
-          {nodes.length >= 2 ? (
+          {readOnly ? (
+            <p className="muted small">Relationships are read-only in the public demo.</p>
+          ) : nodes.length >= 2 ? (
             <div className="link-form">
               <label className="field"><span>From</span>
                 <select value={source} onChange={(event) => setSource(event.target.value)}><option value="">Select device</option>{nodes.map((node) => <option key={node.id} value={node.id}>{node.name}</option>)}</select>
@@ -204,7 +208,7 @@ export default function TopologyView({
               {links.map((link) => {
                 const left = nodes.find((node) => node.id === link.source_device_id)?.name ?? "Unknown";
                 const right = nodes.find((node) => node.id === link.target_device_id)?.name ?? "Unknown";
-                return <div className="link-item" key={link.id}><span>{left} <i>↔</i> {right}<small>{link.label || "Manually configured"}</small></span><button className="icon-button danger" aria-label={`Remove ${left} to ${right} relationship`} onClick={() => void onDeleteLink(link.id)}><Trash2 size={15} /></button></div>;
+                return <div className="link-item" key={link.id}><span>{left} <i>↔</i> {right}<small>{link.label || "Manually configured"}</small></span>{!readOnly && <button className="icon-button danger" aria-label={`Remove ${left} to ${right} relationship`} onClick={() => void onDeleteLink(link.id)}><Trash2 size={15} /></button>}</div>;
               })}
             </div>
           )}

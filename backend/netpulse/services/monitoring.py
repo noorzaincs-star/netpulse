@@ -10,7 +10,7 @@ from netpulse.checks.dns import query_dns
 from netpulse.checks.ping import ping_host
 from netpulse.checks.result import CheckResult, CheckStatus
 from netpulse.checks.tcp import check_tcp
-from netpulse.core.config import Settings
+from netpulse.core.config import PUBLIC_DEMO_TARGETS, Settings
 from netpulse.models import Device, Incident, Measurement
 from netpulse.schemas.devices import CheckType, DeviceState
 from netpulse.services.events import EventBroker
@@ -47,6 +47,13 @@ class MonitoringService:
                 device = await session.get(Device, device_id)
                 if device is None:
                     raise LookupError("Device not found.")
+                if (
+                    self.settings.public_demo_mode
+                    and device.hostname not in PUBLIC_DEMO_TARGETS
+                ):
+                    raise PermissionError(
+                        "Public demo checks are restricted to google.com and 8.8.8.8."
+                    )
                 if not device.enabled:
                     raise PermissionError("Paused devices cannot be checked.")
                 snapshot = {

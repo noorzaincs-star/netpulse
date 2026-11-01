@@ -1,3 +1,5 @@
+import secrets
+
 import pytest
 
 from netpulse.core.config import Settings
@@ -37,11 +39,20 @@ def test_settings_accept_deployment_origins() -> None:
     assert "netpulse-api.onrender.com" in settings.allowed_hosts
 
 
+def test_public_demo_requires_strong_admin_token() -> None:
+    with pytest.raises(ValueError, match="ADMIN_TOKEN"):
+        Settings(public_demo_mode=True)
+    with pytest.raises(ValueError, match="at least 32 characters"):
+        Settings(public_demo_mode=True, admin_token="too-short")
+
+
 def test_environment_reads_deployment_cors_and_render_hostname(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("CORS_ORIGINS", "https://netpulse.vercel.app,https://preview.vercel.app")
     monkeypatch.setenv("RENDER_EXTERNAL_HOSTNAME", "netpulse-api.onrender.com")
+    monkeypatch.setenv("NETPULSE_DEMO", "true")
+    monkeypatch.setenv("ADMIN_TOKEN", secrets.token_urlsafe(32))
 
     settings = Settings.from_environment()
 
@@ -50,3 +61,4 @@ def test_environment_reads_deployment_cors_and_render_hostname(
         "https://preview.vercel.app",
     )
     assert "netpulse-api.onrender.com" in settings.allowed_hosts
+    assert settings.public_demo_mode is True

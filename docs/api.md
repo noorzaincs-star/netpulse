@@ -91,10 +91,14 @@ Supports `device_id`, `severity` (`info`, `warning`, `critical`), `status` (`act
 - `GET /api/topology`: registered devices plus manually configured links and an explicit note that physical relationships are not inferred.
 - `POST /api/topology/links`: create a link with `source_device_id`, `target_device_id`, and optional `label`. Self-links and unknown device IDs are rejected.
 - `DELETE /api/topology/links/{link_id}`: remove a manual link (HTTP 204).
-- `GET /api/settings`: non-secret limits and effective monitoring thresholds.
+- `GET /api/settings`: non-secret limits and effective monitoring thresholds, including the `demo_mode` flag and allowlisted demo targets.
 
 ## WebSocket
 
 ### `WS /api/ws`
 
 Streams committed `device.updated`, `device.deleted`, `measurement.created`, `incident.created`, `incident.recovered`, and topology updates. A keepalive is sent during idle periods. Local clients are supported by default; remote clients must send a browser `Origin` matching `CORS_ORIGINS`. The frontend reconnects with backoff and continues REST polling while disconnected. CORS is not authentication.
+
+### Public demo mode
+
+Set `NETPULSE_DEMO=true` and provide an `ADMIN_TOKEN` of at least 32 characters. Public GET endpoints expose only `google.com` and `8.8.8.8`; interface statistics are unavailable. All POST, PUT, PATCH, and DELETE requests require `Authorization: Bearer <ADMIN_TOKEN>`. Demo-mode device changes are additionally restricted to the two exact allowlisted hosts, and the worker and monitoring service independently enforce the same target restriction. Startup configures TCP port 443 for both hosts and DNS checks for `google.com`; it creates no sample measurements. With `NETPULSE_DEMO` unset or false, existing local behavior is unchanged.

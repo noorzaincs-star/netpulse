@@ -1,3 +1,9 @@
+---
+title: NetPulse
+sdk: docker
+app_port: 7860
+---
+
 # NetPulse
 
 NetPulse is a local-first network monitoring and diagnostics application. It runs real ICMP, TCP, and DNS checks only for targets you explicitly configure, stores results in local SQLite, and presents measured data in a React dashboard. Empty, stale, and failed checks remain distinct; there is no fabricated live or demo data.
@@ -51,6 +57,28 @@ Keep both windows open. Open `http://127.0.0.1:5173` for the dashboard or `http:
 
 Optionally, copy `.env.example` to `.env` in the project root to configure local limits.
 
+### Test public demo mode locally
+
+Demo mode requires a private `ADMIN_TOKEN` with at least 32 characters. In PowerShell, from the project root, set these values in the API window before starting the backend:
+
+```powershell
+$env:NETPULSE_DEMO = "true"
+$env:ADMIN_TOKEN = "replace-with-a-private-random-token-at-least-32-characters"
+Set-Location backend
+.\.venv\Scripts\python.exe -m uvicorn netpulse.main:app --host 127.0.0.1 --port 8000
+```
+
+In another window, start the frontend as above and open `http://127.0.0.1:5173`. Only the real `google.com` and `8.8.8.8` targets are seeded; the first measurements appear after actual TCP/DNS probes finish. No ICMP checks, sample measurements, or fake readings are created. Demo mode hides all write controls; API mutations require `Authorization: Bearer <ADMIN_TOKEN>`.
+
+## Hugging Face Spaces (single Docker service)
+
+Create a Docker Space from this repository. The root [Dockerfile](./Dockerfile) builds the frontend and serves it, the API, and WebSockets from the same origin on port `7860`. In Space **Settings → Variables and secrets**, set:
+
+- `NETPULSE_DEMO` = `true`
+- `ADMIN_TOKEN` = a private random secret of at least 32 characters; store it as a secret, not a public variable.
+
+The default image listens on `0.0.0.0:7860`; local development still uses the separate Vite server and loopback API described above.
+
 ## Deploy on Render and Vercel
 
 The API and frontend are deployed separately. Set the API origin (without `/api`) as the Vite build-time variable `VITE_API_URL`; the frontend derives its REST, WebSocket, and API-docs URLs from it.
@@ -72,7 +100,11 @@ The API and frontend are deployed separately. Set the API origin (without `/api`
 
 Vercel builds the static site; it does not need a separate start command. Set `VITE_API_URL` in the Vercel project settings and redeploy after changing it. The URL must be the API origin, with no trailing slash or `/api`. Set `CORS_ORIGINS` on Render to the corresponding Vercel origin.
 
-**Deployment limitations:** The API currently has no authentication. CORS and allowed-host checks are not authentication and do not prevent non-browser clients from calling the API. Do not expose real monitoring targets to a public API until authentication or equivalent access controls are in place. SQLite storage on a typical Render filesystem is ephemeral; use a persistent disk and a `NETPULSE_DATABASE_URL` on that disk if data must survive redeploys/restarts.
+**Deployment limitations:** Local mode is intentionally unauthenticated and is for localhost use. Enable public demo mode before exposing the API; CORS and allowed-host checks alone are not authentication. SQLite on a typical Render filesystem is ephemeral, so data can be lost when a free service restarts or spins down.
+
+### Public read-only demo mode
+
+Enable the hosted demo with `NETPULSE_DEMO=true` and a private `ADMIN_TOKEN` of at least 32 characters. In demo mode, public reads show only the two allowlisted targets, `google.com` and `8.8.8.8`; all API mutations require the bearer token. The frontend hides mutation controls. Startup configures TCP/443 checks for both targets and DNS checks for `google.com`; it inserts no measurements. Keep the token in the hosting platform's secret settings, never in source control. For local testing, follow [Test public demo mode locally](#test-public-demo-mode-locally).
 
 ## Test and build
 

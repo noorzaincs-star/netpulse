@@ -8,7 +8,10 @@ import type {
   TopologyNode,
 } from "../types";
 
-const API_ORIGIN = (import.meta.env.VITE_API_URL || "http://127.0.0.1:8000").replace(
+const API_ORIGIN = (
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.PROD ? window.location.origin : "http://127.0.0.1:8000")
+).replace(
   /\/+$/,
   "",
 );

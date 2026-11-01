@@ -1,4 +1,5 @@
 import asyncio
+import time
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, Query, Request
@@ -6,6 +7,8 @@ import psutil
 from sqlalchemy import func, select
 
 from netpulse.api.devices import get_device_or_404
+from netpulse.api.security import AdminRequired, demo_device_ids, visible_demo_hosts
+from netpulse.core.config import PUBLIC_DEMO_TARGETS
 from netpulse.models import Device, Incident, Measurement, TopologyLink
 from netpulse.schemas.devices import DeviceState
 from netpulse.schemas.monitoring import (
@@ -43,6 +46,8 @@ async def list_measurements(
     async with request.app.state.sessions() as session:
         query = select(Measurement)
         filters = []
+        if request.app.state.settings.public_demo_mode:
+            filters.append(Measurement.device_id.in_(demo_device_ids()))
         if device_id:
             filters.append(Measurement.device_id == device_id)
         if check_type:
@@ -80,7 +85,11 @@ async def list_device_measurements(
     page_size: int = Query(default=50, ge=1, le=200),
 ) -> MeasurementListResponse:
     async with request.app.state.sessions() as session:
-        await get_device_or_404(session, device_id)
+        await get_device_or_404(
+            session,
+            device_id,
+            allowed_hosts=visible_demo_hosts(request),
+        )
     return await list_measurements(
         request,
         device_id=device_id,
@@ -111,6 +120,8 @@ async def list_incidents(
     async with request.app.state.sessions() as session:
         query = select(Incident)
         filters = []
+        if request.app.state.settings.public_demo_mode:
+            filters.append(Incident.device_id.in_(demo_device_ids()))
         if device_id:
             filters.append(Incident.device_id == device_id)
         if severity:
@@ -160,6 +171,13 @@ async def list_incidents(
 
 @router.get("/interfaces")
 async def interfaces(request: Request) -> dict:
+    if request.app.state.settings.public_demo_mode:
+        return {
+            "scope": "local_host_interfaces",
+            "sampled_at": time.time(),
+            "note": "Local host interface statistics are not exposed in public demo mode.",
+            "interfaces": [],
+        }
     try:
         return await asyncio.to_thread(request.app.state.interface_sampler.snapshot)
     except (OSError, psutil.Error) as exc:
@@ -172,8 +190,17 @@ async def interfaces(request: Request) -> dict:
 @router.get("/topology", response_model=TopologyResponse)
 async def topology(request: Request) -> TopologyResponse:
     async with request.app.state.sessions() as session:
-        devices = (await session.scalars(select(Device).order_by(Device.name))).all()
-        links = (await session.scalars(select(TopologyLink))).all()
+        device_query = select(Device).order_by(Device.name)
+        link_query = select(TopologyLink)
+        if request.app.state.settings.public_demo_mode:
+            allowed_ids = demo_device_ids()
+            device_query = device_query.where(Device.hostname.in_(PUBLIC_DEMO_TARGETS))
+            link_query = link_query.where(
+                TopologyLink.source_device_id.in_(allowed_ids),
+                TopologyLink.target_device_id.in_(allowed_ids),
+            )
+        devices = (await session.scalars(device_query)).all()
+        links = (await session.scalars(link_query)).all()
     return TopologyResponse(
         nodes=[
             {
@@ -191,7 +218,12 @@ async def topology(request: Request) -> TopologyResponse:
     )
 
 
-@router.post("/topology/links", response_model=TopologyLinkResponse, status_code=201)
+@router.post(
+    "/topology/links",
+    response_model=TopologyLinkResponse,
+    status_code=201,
+    dependencies=[AdminRequired],
+)
 async def create_topology_link(
     payload: TopologyLinkCreate,
     request: Request,
@@ -203,7 +235,11 @@ async def create_topology_link(
         )
     async with request.app.state.sessions() as session:
         for device_id in (payload.source_device_id, payload.target_device_id):
-            await get_device_or_404(session, device_id)
+            await get_device_or_404(
+                session,
+                device_id,
+                allowed_hosts=visible_demo_hosts(request),
+            )
         link = TopologyLink(
             source_device_id=payload.source_device_id,
             target_device_id=payload.target_device_id,
@@ -220,7 +256,11 @@ async def create_topology_link(
     return response
 
 
-@router.delete("/topology/links/{link_id}", status_code=204)
+@router.delete(
+    "/topology/links/{link_id}",
+    status_code=204,
+    dependencies=[AdminRequired],
+)
 async def delete_topology_link(link_id: str, request: Request) -> None:
     async with request.app.state.sessions() as session:
         link = await session.get(TopologyLink, link_id)
@@ -240,6 +280,11 @@ async def delete_topology_link(link_id: str, request: Request) -> None:
 async def get_settings(request: Request) -> dict:
     settings = request.app.state.settings
     return {
+        "demo_mode": settings.public_demo_mode,
+        "admin_writes_require_token": settings.public_demo_mode,
+        "demo_targets": sorted(PUBLIC_DEMO_TARGETS)
+        if settings.public_demo_mode
+        else [],
         "limits": {
             "max_devices": settings.max_devices,
             "max_concurrency": settings.max_concurrency,

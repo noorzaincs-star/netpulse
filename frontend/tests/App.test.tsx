@@ -53,6 +53,7 @@ describe("NetPulse dashboard states", () => {
     vi.stubGlobal("WebSocket", MockWebSocket);
     render(<App />);
     expect(screen.getByRole("status")).toHaveTextContent("Connecting to the local API");
+    expect(screen.queryByRole("button", { name: "Add device" })).not.toBeInTheDocument();
     firstRequestPending = false;
     await act(async () => { release(); });
     expect(await screen.findAllByText("No devices configured")).not.toHaveLength(0);
@@ -78,6 +79,18 @@ describe("NetPulse dashboard states", () => {
     expect(await screen.findAllByText("Edge gateway")).not.toHaveLength(0);
     expect(screen.getAllByText("Operational").length).toBeGreaterThan(0);
     expect(screen.getByText("3.2 ms")).toBeInTheDocument();
+  });
+
+  it("hides write controls in read-only public demo mode", async () => {
+    renderApp(apiPayload({ devices: [device], publicDemoMode: true }));
+    expect(await screen.findAllByText("Edge gateway")).not.toHaveLength(0);
+    expect(screen.getByText("Read-only public demo. Scheduled checks use real measurements and are restricted to google.com and 8.8.8.8.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Add device" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Check Edge gateway now" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Edit Edge gateway" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Devices/ }));
+    expect(screen.queryByRole("button", { name: "Pause Edge gateway" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Delete Edge gateway" })).not.toBeInTheDocument();
   });
 
   it("exposes configurable ping count and timeout in the add-device form", async () => {
