@@ -45,7 +45,10 @@ async def ping_host(
     timeouts = 0
 
     for _ in range(count):
-        args = ["-n", "1", "-w", str(max(1, round(timeout_seconds * 1000)))]
+        if sys.platform == "win32":
+            args = ["-n", "1", "-w", str(max(1, round(timeout_seconds * 1000)))]
+        else:
+            args = ["-c", "1", "-W", str(max(1, round(timeout_seconds)))]
         if address is not None and address.version == 6:
             args.insert(0, "-6")
         args.append(target)

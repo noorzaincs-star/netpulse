@@ -12,6 +12,7 @@ venv/
 node_modules/
 dist/
 coverage/
+*.tsbuildinfo
 
 # Local configuration and runtime data
 .env

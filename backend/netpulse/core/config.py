@@ -94,6 +94,6 @@ class Settings:
                 os.environ.get("NETPULSE_PACKET_LOSS_THRESHOLD_PERCENT", "20")
             ),
             measurement_retention_days=int(os.environ.get("NETPULSE_RETENTION_DAYS", "30")),
-            cors_origins=tuple(origin.strip() for origin in origins.split(",") if origin.strip()),
+            cors_origins=tuple(origin.strip().rstrip("/") for origin in origins.split(",") if origin.strip()),
             allowed_hosts=tuple(dict.fromkeys(allowed_hosts)),
         )
