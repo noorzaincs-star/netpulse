@@ -97,7 +97,7 @@ flowchart LR
 
 ## Hugging Face Spaces — single Docker service
 
-For a single public URL, create a Docker Space using the repository root as the build context. The root Dockerfile builds the frontend and serves it with the API and WebSocket endpoint on port `7860`. In Space **Settings → Variables and secrets**, set `NETPULSE_DEMO=true` and set `ADMIN_TOKEN` as a secret containing at least 32 characters. The frontend uses same-origin REST and WebSocket URLs in production. Startup creates only the two allowlisted device configurations; measurements come from real checks, with no sample data.
+For a single public URL, create a Docker Space using the repository root as the build context. The root Dockerfile builds the frontend and serves it with the API and WebSocket endpoint on port `7860`; the image defaults to demo mode. In Space **Settings → Variables and secrets**, set `NETPULSE_DEMO=true` and optionally set `ADMIN_TOKEN` as a secret containing at least 32 characters. Without a token, the dashboard remains available in read-only mode and mutations are rejected. The frontend uses same-origin REST and WebSocket URLs in production. Startup creates only the two allowlisted device configurations; measurements come from real checks, with no sample data.
 
 ## 4. Verification
 

@@ -133,6 +133,32 @@ def test_public_demo_rejects_device_creation_and_manual_checks(demo_app) -> None
     ).status_code == 401
 
 
+def test_demo_mode_without_admin_token_stays_available_but_rejects_writes(
+    tmp_path: Path,
+) -> None:
+    app = create_app(
+        Settings(
+            database_url=f"sqlite+aiosqlite:///{tmp_path / 'demo-no-token.sqlite3'}",
+            public_demo_mode=True,
+        ),
+        start_worker=False,
+    )
+    with TestClient(app, base_url="http://127.0.0.1") as client:
+        assert client.get("/api/health").status_code == 200
+        assert client.get("/api/devices").status_code == 200
+        response = client.post(
+            "/api/devices",
+            json={
+                "name": "Unauthorized target",
+                "hostname": "example.com",
+                "check_types": ["icmp"],
+            },
+        )
+
+    assert response.status_code == 503
+    assert response.json()["error"]["code"] == "admin_auth_unavailable"
+
+
 def test_admin_token_protects_mutations_and_hostname_is_allowlisted(
     demo_app,
     monkeypatch: pytest.MonkeyPatch,

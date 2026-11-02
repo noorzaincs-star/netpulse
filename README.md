@@ -74,8 +74,8 @@ In another window, start the frontend as above and open `http://127.0.0.1:5173`.
 
 Create a Docker Space from this repository. The root [Dockerfile](./Dockerfile) builds the frontend and serves it, the API, and WebSockets from the same origin on port `7860`. In Space **Settings → Variables and secrets**, set:
 
-- `NETPULSE_DEMO` = `true`
-- `ADMIN_TOKEN` = a private random secret of at least 32 characters; store it as a secret, not a public variable.
+- `NETPULSE_DEMO` = `true` (the Docker image defaults to demo mode as a safety measure)
+- `ADMIN_TOKEN` = a private random secret of at least 32 characters; store it as a secret, not a public variable. Without it, the public read-only dashboard still starts, but admin API writes return HTTP 503.
 
 The default image listens on `0.0.0.0:7860`; local development still uses the separate Vite server and loopback API described above.
 

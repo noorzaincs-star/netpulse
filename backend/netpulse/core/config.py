@@ -64,10 +64,8 @@ class Settings:
                 raise ValueError("CORS origins must be HTTP(S) origins without paths or credentials.")
         if any(not host or host != host.strip() for host in self.allowed_hosts):
             raise ValueError("allowed_hosts must contain non-empty hostnames.")
-        if self.public_demo_mode and (
-            self.admin_token is None
-            or len(self.admin_token) < 32
-            or not self.admin_token.strip()
+        if self.public_demo_mode and self.admin_token is not None and (
+            len(self.admin_token) < 32 or not self.admin_token.strip()
         ):
             raise ValueError(
                 "ADMIN_TOKEN must contain at least 32 characters when NETPULSE_DEMO is enabled."
