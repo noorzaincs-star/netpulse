@@ -10,6 +10,7 @@ import type {
 
 const API_ORIGIN = (
   import.meta.env.VITE_API_URL ||
+  window.huggingface?.variables?.NETPULSE_API_URL ||
   (import.meta.env.PROD ? window.location.origin : "http://127.0.0.1:8000")
 ).replace(
   /\/+$/,

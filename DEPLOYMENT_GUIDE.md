@@ -95,9 +95,16 @@ flowchart LR
 
 ---
 
-## Hugging Face Spaces — single Docker service
+## Free Hugging Face + Render deployment
 
-For a single public URL, create a Docker Space using the repository root as the build context. The root Dockerfile builds the frontend and serves it with the API and WebSocket endpoint on port `7860`; the image defaults to demo mode. In Space **Settings → Variables and secrets**, set `NETPULSE_DEMO=true` and optionally set `ADMIN_TOKEN` as a secret containing at least 32 characters. Without a token, the dashboard remains available in read-only mode and mutations are rejected. The frontend uses same-origin REST and WebSocket URLs in production. Startup creates only the two allowlisted device configurations; measurements come from real checks, with no sample data.
+Hugging Face Docker Spaces currently require a paid plan. Use a static Space for the dashboard and Render's free Python web service for the backend. Free Render services can sleep when idle and have ephemeral local storage; expect cold starts and SQLite history resets after restarts.
+
+1. Create a Render Blueprint from the GitHub repository using `render.yaml`, and choose the free plan. It sets demo mode and permits the known Hugging Face static Space origin.
+2. Copy the deployed backend URL (for example `https://netpulse-backend.onrender.com`).
+3. Add `NETPULSE_API_URL` as a non-secret variable in Hugging Face Space settings, with that backend URL and no trailing slash.
+4. The static frontend derives both REST and WebSocket URLs from this runtime variable. Public API mutations require the backend's generated `ADMIN_TOKEN`; do not place it in frontend variables.
+
+The static Space's free Hugging Face build instructions are in its Space README. Startup configures only the allowlisted real devices; no sample measurement data is inserted.
 
 ## 4. Verification
 

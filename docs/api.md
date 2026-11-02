@@ -97,7 +97,7 @@ Supports `device_id`, `severity` (`info`, `warning`, `critical`), `status` (`act
 
 ### `WS /api/ws`
 
-Streams committed `device.updated`, `device.deleted`, `measurement.created`, `incident.created`, `incident.recovered`, and topology updates. A keepalive is sent during idle periods. Local clients are supported by default; remote clients must send a browser `Origin` matching `CORS_ORIGINS`. The frontend reconnects with backoff and continues REST polling while disconnected. CORS is not authentication.
+Streams committed `device.updated`, `device.deleted`, `measurement.created`, `incident.created`, `incident.recovered`, and topology updates. A keepalive is sent during idle periods. Local clients are supported by default; remote clients must send a browser `Origin` matching `CORS_ORIGINS`. The frontend reconnects with backoff and continues REST polling while disconnected. For the static Hugging Face dashboard, set its `NETPULSE_API_URL` Space variable to the backend origin; both REST and WebSocket URLs are derived from it. CORS is not authentication.
 
 ### Public demo mode
 

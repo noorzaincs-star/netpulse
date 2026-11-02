@@ -1,9 +1,3 @@
----
-title: NetPulse
-sdk: docker
-app_port: 7860
----
-
 # NetPulse
 
 NetPulse is a local-first network monitoring and diagnostics application. It runs real ICMP, TCP, and DNS checks only for targets you explicitly configure, stores results in local SQLite, and presents measured data in a React dashboard. Empty, stale, and failed checks remain distinct; there is no fabricated live or demo data.
@@ -70,14 +64,16 @@ Set-Location backend
 
 In another window, start the frontend as above and open `http://127.0.0.1:5173`. Only the real `google.com` and `8.8.8.8` targets are seeded; the first measurements appear after actual TCP/DNS probes finish. No ICMP checks, sample measurements, or fake readings are created. Demo mode hides all write controls; API mutations require `Authorization: Bearer <ADMIN_TOKEN>` with the configured private token.
 
-## Hugging Face Spaces (single Docker service)
+## Free hosted deployment
 
-Create a Docker Space from this repository. The root [Dockerfile](./Dockerfile) builds the frontend and serves it, the API, and WebSockets from the same origin on port `7860`. In Space **Settings → Variables and secrets**, set:
+Hugging Face Docker Spaces require a paid plan. For a no-card setup, use the free static Hugging Face Space for the dashboard and a free Render web service for the API. Render's free service may sleep when idle and uses an ephemeral filesystem, so it can have a cold start and SQLite history can reset after restarts.
 
-- `NETPULSE_DEMO` = `true` (the Docker image defaults to demo mode as a safety measure)
-- `ADMIN_TOKEN` = a private random secret of at least 32 characters; store it as a secret, not a public variable. Without it, the public read-only dashboard still starts, but admin API writes return HTTP 503.
+1. Deploy the backend from this GitHub repository using the root `render.yaml` Blueprint (`New` → `Blueprint` on Render). Choose the free plan when prompted. The Blueprint enables `NETPULSE_DEMO=true`, restricts CORS to this dashboard, and generates a private `ADMIN_TOKEN`.
+2. In Render, copy the backend's public URL, for example `https://netpulse-backend.onrender.com`.
+3. In the Hugging Face Space **Settings → Variables**, set `NETPULSE_API_URL` to that backend URL (no trailing slash). The frontend derives both REST and WebSocket URLs from it.
+4. The dashboard is at https://noorzan-netpulse-network-monitor.static.hf.space/. It shows real measurements once scheduled TCP/DNS checks have run; demo mode seeds only the two allowed targets and never inserts sample measurements.
 
-The default image listens on `0.0.0.0:7860`; local development still uses the separate Vite server and loopback API described above.
+Do not set `ADMIN_TOKEN` as a frontend/Space variable. It is generated and kept private by the Render backend. The backend remains read-only to public visitors.
 
 ## Deploy on Render and Vercel
 

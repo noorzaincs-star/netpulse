@@ -11,7 +11,7 @@ services:
       - key: PYTHON_VERSION
         value: 3.11.10
       - key: CORS_ORIGINS
-        sync: false
+        value: https://noorzan-netpulse-network-monitor.static.hf.space
       - key: NETPULSE_DEMO
         value: true
       - key: ADMIN_TOKEN
