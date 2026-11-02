@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { api, socketUrl } from "../lib/api";
+import { api, apiConfigured, socketUrl } from "../lib/api";
 import type {
   Device,
   Incident,
@@ -106,6 +106,10 @@ export function useNetPulse(): NetPulseState {
     let active = true;
     const connect = () => {
       if (!active) return;
+      if (!apiConfigured) {
+        setConnection("error");
+        return;
+      }
       setConnection((current) => (current === "live" ? current : "connecting"));
       const socket = new WebSocket(socketUrl());
       socketRef.current = socket;

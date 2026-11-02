@@ -8,11 +8,17 @@ import type {
   TopologyNode,
 } from "../types";
 
-const API_ORIGIN = (
+const configuredApiOrigin =
   import.meta.env.VITE_API_URL ||
-  window.huggingface?.variables?.NETPULSE_API_URL ||
-  (import.meta.env.PROD ? window.location.origin : "http://127.0.0.1:8000")
-).replace(
+  window.huggingface?.variables?.NETPULSE_API_URL;
+const missingHuggingFaceApiUrl =
+  import.meta.env.PROD &&
+  window.location.hostname.endsWith(".static.hf.space") &&
+  !configuredApiOrigin;
+export const apiConfigured = !missingHuggingFaceApiUrl;
+const API_ORIGIN = (configuredApiOrigin || (import.meta.env.PROD
+  ? window.location.origin
+  : "http://127.0.0.1:8000")).replace(
   /\/+$/,
   "",
 );
@@ -32,6 +38,13 @@ export class ApiError extends Error {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  if (!apiConfigured) {
+    throw new ApiError(
+      "Backend URL is missing. Deploy the Render API and set NETPULSE_API_URL in the Hugging Face Space variables.",
+      0,
+      "api_url_missing",
+    );
+  }
   let response: Response;
   try {
     response = await fetch(`${API_BASE}${path}`, {
