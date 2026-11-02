@@ -68,7 +68,7 @@ Set-Location backend
 .\.venv\Scripts\python.exe -m uvicorn netpulse.main:app --host 127.0.0.1 --port 8000
 ```
 
-In another window, start the frontend as above and open `http://127.0.0.1:5173`. Only the real `google.com` and `8.8.8.8` targets are seeded; the first measurements appear after actual TCP/DNS probes finish. No ICMP checks, sample measurements, or fake readings are created. Demo mode hides all write controls; API mutations require `Authorization: Bearer <ADMIN_TOKEN>`.
+In another window, start the frontend as above and open `http://127.0.0.1:5173`. Only the real `google.com` and `8.8.8.8` targets are seeded; the first measurements appear after actual TCP/DNS probes finish. No ICMP checks, sample measurements, or fake readings are created. Demo mode hides all write controls; API mutations require `Authorization: Bearer <ADMIN_TOKEN>` with the configured private token.
 
 ## Hugging Face Spaces (single Docker service)
 
