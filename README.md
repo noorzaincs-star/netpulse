@@ -64,16 +64,13 @@ Set-Location backend
 
 In another window, start the frontend as above and open `http://127.0.0.1:5173`. Only the real `google.com` and `8.8.8.8` targets are seeded; the first measurements appear after actual TCP/DNS probes finish. No ICMP checks, sample measurements, or fake readings are created. Demo mode hides all write controls; API mutations require `Authorization: Bearer <ADMIN_TOKEN>` with the configured private token.
 
-## Free hosted deployment
+## Hosted deployment
 
-Hugging Face Docker Spaces require a paid plan. For a no-card setup, use the free static Hugging Face Space for the dashboard and a free Render web service for the API. Render's free service may sleep when idle and uses an ephemeral filesystem, so it can have a cold start and SQLite history can reset after restarts.
+### Northflank backend container configuration
 
-1. Deploy the backend from this GitHub repository using the root `render.yaml` Blueprint (`New` → `Blueprint` on Render). Choose the free plan when prompted. The Blueprint enables `NETPULSE_DEMO=true`, restricts CORS to this dashboard, and generates a private `ADMIN_TOKEN`.
-2. In Render, copy the backend's public URL, for example `https://netpulse-backend.onrender.com`.
-3. In the Hugging Face Space **Settings → Variables**, set `NETPULSE_API_URL` to that backend URL (no trailing slash). The frontend derives both REST and WebSocket URLs from it.
-4. The dashboard is at https://noorzan-netpulse-network-monitor.static.hf.space/. It shows real measurements once scheduled TCP/DNS checks have run; demo mode seeds only the two allowed targets and never inserts sample measurements.
+The backend-only image is [backend/Dockerfile](./backend/Dockerfile), separate from the root full-stack Docker image. Set the build context to the repository root and the Dockerfile path to `backend/Dockerfile`. It listens on `$PORT` (defaults to `7860`), checks health at `/api/health`, enables `NETPULSE_DEMO=true`, and restricts CORS to the hosted dashboard by default. Attach persistent storage at `/data`; SQLite uses `NETPULSE_DATABASE_URL=sqlite+aiosqlite:////data/netpulse.db`. Set `ADMIN_TOKEN` only as a backend service secret, never in the frontend. Confirm free-plan eligibility, card requirements, persistent storage access, and outbound probe support in the provider account before deploying; those depend on the provider's current offering and account.
 
-Do not set `ADMIN_TOKEN` as a frontend/Space variable. It is generated and kept private by the Render backend. The backend remains read-only to public visitors.
+The dashboard is hosted separately at https://noorzan-netpulse-network-monitor.static.hf.space/. Set its `NETPULSE_API_URL` variable to the backend origin after the backend service is running. It will show real measurements after scheduled TCP/DNS checks; demo mode seeds only the two allowed targets and never inserts sample measurements.
 
 ## Deploy on Render and Vercel
 
